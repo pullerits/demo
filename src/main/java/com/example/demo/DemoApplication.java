@@ -1,9 +1,11 @@
 package com.example.demo;
 
+import jakarta.persistence.*;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
 import org.springframework.ui.Model;
@@ -11,8 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
 @SpringBootApplication
@@ -23,8 +23,11 @@ public class DemoApplication {
 	}
 
 }
-
+@Entity
+@Table(name = "app_user")
 class User {
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	private String username;
 	private String password; // In production, use encrypted passwords!
@@ -35,6 +38,8 @@ class User {
 		this.username = username;
 		this.password = password;
 	}
+
+	public User() {} //Default constructor required by JPA
 
 	// Getters and setters
 	public Long getId() {
@@ -60,6 +65,10 @@ class User {
 	public void setPassword(String password) {
 		this.password = password;
 	}
+}
+
+interface UserRepository extends JpaRepository<User, Long> {
+	Optional<User> findByUsername(String username);
 }
 
 @Controller
@@ -114,22 +123,21 @@ class LoginController {
 
 @Service
 class UserService {
-	private final List<User> users = new ArrayList<>();
 
-	public UserService() {
-		// Hardcode a single user for demonstration purposes
-		users.add(new User(1L, "user", "password"));
+	private UserRepository userRepository;
+
+	public UserService(UserRepository userRepository) {
+		this.userRepository = userRepository;
 	}
 
 	public void registerUser(String username, String password) {
-		long newId = users.size() + 1;
-		users.add(new User(newId, username, password));
+		// Create a new user and save it to the database
+		User user = new User(null, username, password);
+		userRepository.save(user);
 	}
 
 	public Optional<User> findByUsername(String username) {
-		return users.stream()
-				.filter(u -> u.getUsername().equals(username))
-				.findFirst();
+		return userRepository.findByUsername(username);
 	}
 }
 
